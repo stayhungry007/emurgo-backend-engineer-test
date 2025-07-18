@@ -1,42 +1,74 @@
+// src/index.ts
+
 import Fastify from 'fastify';
-import { blocksRoute } from './routes/blocks';
-import { balancesRoute } from './routes/balances';
-import { rollbackRoute } from './routes/rollback';
-import { helloworld } from './routes/helloworld';
+import { Database } from './databases';
+import { IndexerService } from './services/indexer';
+import { registerRoutes } from './routes';
 
-import { createTables, testPostgres } from './database/db';
-import { findAncestor } from 'typescript';
-
-const fastify = Fastify({ logger: true });
-
-async function bootstrap() {
-  await createTables();
-  await testPostgres();
-
-  fastify.register(blocksRoute);
-  fastify.register(balancesRoute);
-  fastify.register(rollbackRoute);
-  fastify.register(helloworld);
-
-  console.log("Server is Running");
-  await fastify.listen({
-    port: 3000,
-    host: '0.0.0.0',
-  });
-}
-
-bootstrap().catch(err => {
-  fastify.log.error(err);
-  process.exit(1);
+const fastify = Fastify({ 
+  logger: true,
+  disableRequestLogging: false
 });
 
+async function bootstrap() {
+  console.log('Bootstrapping blockchain indexer...');
+  
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
 
-export function createApp() {
-  const fastify_test = Fastify();
+  // Initialize database
+  const db = new Database(databaseUrl);
+  await db.initialize();
+  console.log('Database initialized successfully');
 
-  fastify.register(blocksRoute);
-  fastify.register(balancesRoute);
-  fastify.register(rollbackRoute);
+  // Initialize indexer service
+  const indexerService = new IndexerService(db);
+  console.log('Indexer service initialized');
 
-  return fastify_test;
+  // Register routes
+  await registerRoutes(fastify, indexerService);
+  console.log('Routes registered');
+
+  // Graceful shutdown
+  // process.on('SIGTERM', async () => {
+  //   console.log('Received SIGTERM, shutting down gracefully...');
+  //   await db.close();
+  //   await fastify.close();
+  //   process.exit(0);
+  // });
+
+  // process.on('SIGINT', async () => {
+  //   console.log('Received SIGINT, shutting down gracefully...');
+  //   await db.close();
+  //   await fastify.close();
+  //   process.exit(0);
+  // });
+
+  return { fastify, db, indexerService };
 }
+
+async function start() {
+  try {
+    const { fastify: app } = bootstrap_instance;
+    
+    const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+    const host = process.env.HOST || '0.0.0.0';
+    
+    await app.listen({ port, host });
+    console.log(`🚀 Blockchain indexer API running on http://${host}:${port}`);
+    
+  } catch (err) {
+    console.error('Failed to start application:', err);
+    process.exit(1);
+  }
+}
+
+const bootstrap_instance = await bootstrap();
+// Only start if this file is run directly
+if (require.main === module) {
+  start();
+}
+
+export { bootstrap_instance };
