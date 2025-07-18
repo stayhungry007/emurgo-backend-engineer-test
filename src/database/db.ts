@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { randomUUID } from 'crypto';
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -20,6 +21,34 @@ export async function createTables() {
       balance INT NOT NULL
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL
+    );
+  `);
+}
+
+
+export async function testPostgres() {
+  const id = randomUUID();
+  const name = 'Satoshi';
+  const email = 'Nakamoto';
+
+  await pool.query(`DELETE FROM users;`);
+
+  await pool.query(`
+    INSERT INTO users (id, name, email)
+    VALUES ($1, $2, $3);
+  `, [id, name, email]);
+
+  const { rows } = await pool.query(`
+    SELECT * FROM users;
+  `);
+
+  console.log('USERS', rows);
 }
 
 export async function getCurrentHeight() {

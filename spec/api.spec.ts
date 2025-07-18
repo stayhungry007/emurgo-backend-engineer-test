@@ -1,3 +1,4 @@
+// spec/api.spec.ts
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { Pool } from 'pg';
 import { sha256 } from '../src/utils/hash';

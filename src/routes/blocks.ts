@@ -9,10 +9,10 @@ import { pool, getCurrentHeight } from '../database/db';
 export async function blocksRoute(fastify: FastifyInstance) {
   fastify.post('/blocks', {
     schema: {
-      body: BlockSchema,
+      body: BlockSchema,  // Define the body schema validation
     },
   }, async (request, reply) => {
-    const block = request.body as Block;  // Type assertion
+    const block: Block = request.body as Block;  // Block should be typed as per the schema
 
     // Validate block height
     const currentHeight = await getCurrentHeight();
@@ -22,7 +22,7 @@ export async function blocksRoute(fastify: FastifyInstance) {
 
     // Validate transaction input/output sums
     for (const transaction of block.transactions) {
-      const inputSum = await getInputSum(transaction.inputs); // Get sum from referenced outputs
+      const inputSum = await getInputSum(transaction.inputs);
       const outputSum = transaction.outputs.reduce((sum, output) => sum + output.value, 0);
 
       if (inputSum !== outputSum) {
