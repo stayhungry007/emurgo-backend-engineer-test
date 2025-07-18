@@ -84,16 +84,46 @@ export async function rollback(height: number): Promise<Response> {
   });
 }
 
-export async function expectBalance(address: string, expectedBalance: number): Promise<void> {
+export async function expectBalance(address: string, expectedBalance: number): Promise<{
+  success: boolean;
+  message?: string;
+  actualBalance?: number;
+  actualStatus?: number;
+}> {
   const response = await getBalance(address);
+  
   if (expectedBalance === 0) {
-    expect(response.status).toBe(404);
+    if (response.status === 404) {
+      return { success: true };
+    } else {
+      return { 
+        success: false, 
+        message: `Expected 404 for zero balance, got ${response.status}`,
+        actualStatus: response.status
+      };
+    }
   } else {
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data.balance).toBe(expectedBalance);
+    if (response.status === 200) {
+      const data = await response.json();
+      if (data.balance === expectedBalance) {
+        return { success: true };
+      } else {
+        return { 
+          success: false, 
+          message: `Expected balance ${expectedBalance}, got ${data.balance}`,
+          actualBalance: data.balance
+        };
+      }
+    } else {
+      return { 
+        success: false, 
+        message: `Expected 200 status, got ${response.status}`,
+        actualStatus: response.status
+      };
+    }
   }
 }
+
 
 export function createGenesisBlock(address: string, value: number): Block {
   return new BlockBuilder(1)

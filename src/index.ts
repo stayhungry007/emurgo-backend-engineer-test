@@ -18,6 +18,7 @@ async function bootstrap() {
   fastify.register(rollbackRoute);
   fastify.register(helloworld);
 
+  console.log("Server is Running");
   await fastify.listen({
     port: 3000,
     host: '0.0.0.0',
